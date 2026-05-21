@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spotify Hit Predictor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Circular+Std:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d0d0d;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 20px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .logo svg { width: 36px; height: 36px; }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: #aaa;
+      margin-bottom: 40px;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: #181818;
+      border-radius: 16px;
+      padding: 36px;
+      width: 100%;
+      max-width: 680px;
+      border: 1px solid #2a2a2a;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px 36px;
+    }
+
+    @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #bbb;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .field label span {
+      color: #1DB954;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: #333;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #1DB954;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+
+    .hint {
+      font-size: 0.72rem;
+      color: #555;
+      margin-top: 5px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #2a2a2a;
+      margin: 32px 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 16px;
+      background: #1DB954;
+      color: #000;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:hover { background: #1ed760; }
+    button:active { transform: scale(0.98); }
+
+    .result {
+      margin-top: 28px;
+      border-radius: 12px;
+      padding: 28px;
+      text-align: center;
+      display: none;
+      animation: fadeUp 0.4s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result.hit     { background: #0f2e1a; border: 1px solid #1DB954; }
+    .result.not-hit { background: #2a1515; border: 1px solid #e84040; }
+
+    .result .emoji  { font-size: 2.8rem; margin-bottom: 10px; }
+
+    .result .label  {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .result.hit     .label { color: #1DB954; }
+    .result.not-hit .label { color: #e84040; }
+
+    .result .prob {
+      font-size: 0.95rem;
+      color: #aaa;
+    }
+
+    .meter-wrap {
+      background: #1a1a1a;
+      border-radius: 50px;
+      height: 8px;
+      margin: 16px 0 8px;
+      overflow: hidden;
+    }
+
+    .meter-fill {
+      height: 100%;
+      border-radius: 50px;
+      transition: width 0.8s ease;
+    }
+
+    .result.hit     .meter-fill { background: #1DB954; }
+    .result.not-hit .meter-fill { background: #e84040; }
+  </style>
+</head>
+<body>
+
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="#1DB954" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.623.623 0 01-.277-1.215c3.809-.87 7.076-.496 9.712 1.115.294.18.387.563.207.857zm1.223-2.722a.779.779 0 01-1.072.257C14.1 12.331 10.74 11.93 7.8 12.804a.78.78 0 01-.456-1.489c3.353-.99 7.214-.51 9.808 1.115a.78.78 0 01.257 1.072zm.105-2.835C15.146 9.15 10.5 8.994 7.686 9.84a.935.935 0 11-.543-1.79c3.232-.981 8.608-.792 11.999 1.16a.936.936 0 01-.228 1.657z"/>
+    </svg>
+    <h1>Hit Predictor</h1>
+  </div>
+  <p class="subtitle">Enter your song's audio features and find out if it's a hit</p>
+
+  <div class="card">
+    <div class="grid">
+
+      <div class="field">
+        <label>Danceability <span id="v-dance">0.50</span></label>
+        <input type="range" id="danceability" min="0" max="1" step="0.01" value="0.5" oninput="update('dance',this.value)"/>
+        <p class="hint">How suitable for dancing (0 = not, 1 = very)</p>
+      </div>
+
+      <div class="field">
+        <label>Energy <span id="v-energy">0.50</span></label>
+        <input type="range" id="energy" min="0" max="1" step="0.01" value="0.5" oninput="update('energy',this.value)"/>
+        <p class="hint">Intensity and activity of the track</p>
+      </div>
+
+      <div class="field">
+        <label>Loudness <span id="v-loud">-30.0 dB</span></label>
+        <input type="range" id="loudness" min="-60" max="0" step="0.5" value="-30" oninput="update('loud',this.value)"/>
+        <p class="hint">Overall loudness in dB (closer to 0 = louder)</p>
+      </div>
+
+      <div class="field">
+        <label>Valence <span id="v-val">0.50</span></label>
+        <input type="range" id="valence" min="0" max="1" step="0.01" value="0.5" oninput="update('val',this.value)"/>
+        <p class="hint">Positivity — happy/euphoric vs sad/angry</p>
+      </div>
+
+      <div class="field">
+        <label>Tempo <span id="v-tempo">120 BPM</span></label>
+        <input type="range" id="tempo" min="50" max="210" step="1" value="120" oninput="update('tempo',this.value)"/>
+        <p class="hint">Speed of the track in beats per minute</p>
+      </div>
+
+      <div class="field">
+        <label>Acousticness <span id="v-acou">0.50</span></label>
+        <input type="range" id="acousticness" min="0" max="1" step="0.01" value="0.5" oninput="update('acou',this.value)"/>
+        <p class="hint">Confidence the track is acoustic</p>
+      </div>
+
+      <div class="field">
+        <label>Speechiness <span id="v-speech">0.05</span></label>
+        <input type="range" id="speechiness" min="0" max="1" step="0.01" value="0.05" oninput="update('speech',this.value)"/>
+        <p class="hint">Presence of spoken words</p>
+      </div>
+
+      <div class="field">
+        <label>Instrumentalness <span id="v-inst">0.00</span></label>
+        <input type="range" id="instrumentalness" min="0" max="1" step="0.01" value="0" oninput="update('inst',this.value)"/>
+        <p class="hint">Predicts whether track has no vocals</p>
+      </div>
+
+      <div class="field">
+        <label>Liveness <span id="v-live">0.10</span></label>
+        <input type="range" id="liveness" min="0" max="1" step="0.01" value="0.1" oninput="update('live',this.value)"/>
+        <p class="hint">Presence of audience in recording</p>
+      </div>
+
+    </div>
+
+    <hr class="divider"/>
+    <button onclick="predict()">Predict</button>
+
+    <div class="result" id="result">
+      <div class="emoji" id="r-emoji"></div>
+      <div class="label" id="r-label"></div>
+      <div class="meter-wrap"><div class="meter-fill" id="r-meter" style="width:0%"></div></div>
+      <div class="prob" id="r-prob"></div>
+    </div>
+  </div>
+
+  <script>
+    function update(id, val) {
+      const el = document.getElementById('v-' + id);
+      if (id === 'loud') el.textContent = parseFloat(val).toFixed(1) + ' dB';
+      else if (id === 'tempo') el.textContent = val + ' BPM';
+      else el.textContent = parseFloat(val).toFixed(2);
+    }
+
+    async function predict() {
+      const btn = document.querySelector('button');
+      btn.textContent = 'Predicting...';
+      btn.disabled = true;
+
+      const payload = {
+        danceability:     parseFloat(document.getElementById('danceability').value),
+        energy:           parseFloat(document.getElementById('energy').value),
+        loudness:         parseFloat(document.getElementById('loudness').value),
+        valence:          parseFloat(document.getElementById('valence').value),
+        tempo:            parseFloat(document.getElementById('tempo').value),
+        acousticness:     parseFloat(document.getElementById('acousticness').value),
+        speechiness:      parseFloat(document.getElementById('speechiness').value),
+        instrumentalness: parseFloat(document.getElementById('instrumentalness').value),
+        liveness:         parseFloat(document.getElementById('liveness').value)
+      };
+
+      try {
+        const res  = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        const box    = document.getElementById('result');
+        const isHit  = data.prediction === 'Hit';
+
+        box.className       = 'result ' + (isHit ? 'hit' : 'not-hit');
+        box.style.display   = 'block';
+        document.getElementById('r-emoji').textContent = isHit ? '🎵' : '😞';
+        document.getElementById('r-label').textContent = data.prediction;
+        document.getElementById('r-prob').textContent  = `Hit probability: ${data.probability}%`;
+        setTimeout(() => {
+          document.getElementById('r-meter').style.width = data.probability + '%';
+        }, 50);
+
+      } catch (e) {
+        alert('Something went wrong. Make sure Flask is running.');
+      }
+
+      btn.textContent = 'Predict';
+      btn.disabled = false;
+    }
+  </script>
+
+</body>
+</html>
