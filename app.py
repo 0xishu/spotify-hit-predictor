@@ -6,7 +6,7 @@ from tensorflow import keras
 
 app = Flask(__name__)
 
-model = keras.models.load_model('spotify_model.keras')
+model = joblib.load('spotify_model_sklearn.pkl')
 scaler = joblib.load('scaler.pkl')
 feature_columns = joblib.load('feature_columns.pkl')
 
@@ -41,7 +41,7 @@ def predict():
 
     sample = sample[feature_columns]
     scaled = scaler.transform(sample)
-    prob = float(model.predict(scaled)[0][0])
+    prob = model.predict_proba(scaled)[0][1] 
 
     return jsonify({
         'probability': round(prob * 100, 1),
