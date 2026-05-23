@@ -1,8 +1,6 @@
 from flask import Flask, request, jsonify, render_template
-import numpy as np
 import pandas as pd
 import joblib
-from tensorflow import keras
 
 app = Flask(__name__)
 
